@@ -14,7 +14,218 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agents: {
+        Row: {
+          created_at: string
+          formatting_rules: string
+          id: string
+          name: string
+          persona: string
+          site_id: string | null
+          target_length: number
+          tone: string
+          writing_style: string
+        }
+        Insert: {
+          created_at?: string
+          formatting_rules?: string
+          id?: string
+          name: string
+          persona?: string
+          site_id?: string | null
+          target_length?: number
+          tone?: string
+          writing_style?: string
+        }
+        Update: {
+          created_at?: string
+          formatting_rules?: string
+          id?: string
+          name?: string
+          persona?: string
+          site_id?: string | null
+          target_length?: number
+          tone?: string
+          writing_style?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      articles: {
+        Row: {
+          agent_id: string | null
+          citations: Json
+          content_markdown: string
+          cover_image_prompt: string
+          created_at: string
+          excerpt: string
+          id: string
+          keywords: string
+          last_error: string | null
+          meta_description: string
+          published_at: string | null
+          scheduled_at: string | null
+          seo_title: string
+          site_id: string | null
+          slug: string
+          status: string
+          tags: string[]
+          title: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          citations?: Json
+          content_markdown?: string
+          cover_image_prompt?: string
+          created_at?: string
+          excerpt?: string
+          id?: string
+          keywords?: string
+          last_error?: string | null
+          meta_description?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          seo_title?: string
+          site_id?: string | null
+          slug?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          topic?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          citations?: Json
+          content_markdown?: string
+          cover_image_prompt?: string
+          created_at?: string
+          excerpt?: string
+          id?: string
+          keywords?: string
+          last_error?: string | null
+          meta_description?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          seo_title?: string
+          site_id?: string | null
+          slug?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "articles_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "articles_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publish_logs: {
+        Row: {
+          article_id: string | null
+          created_at: string
+          http_status: number | null
+          id: string
+          message: string
+          site_id: string | null
+          success: boolean
+        }
+        Insert: {
+          article_id?: string | null
+          created_at?: string
+          http_status?: number | null
+          id?: string
+          message?: string
+          site_id?: string | null
+          success: boolean
+        }
+        Update: {
+          article_id?: string | null
+          created_at?: string
+          http_status?: number | null
+          id?: string
+          message?: string
+          site_id?: string | null
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publish_logs_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publish_logs_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sites: {
+        Row: {
+          analysis: Json | null
+          analyzed_at: string | null
+          api_key: string
+          created_at: string
+          default_author: string
+          default_category: string
+          endpoint_url: string
+          id: string
+          name: string
+          url: string
+        }
+        Insert: {
+          analysis?: Json | null
+          analyzed_at?: string | null
+          api_key?: string
+          created_at?: string
+          default_author?: string
+          default_category?: string
+          endpoint_url?: string
+          id?: string
+          name: string
+          url?: string
+        }
+        Update: {
+          analysis?: Json | null
+          analyzed_at?: string | null
+          api_key?: string
+          created_at?: string
+          default_author?: string
+          default_category?: string
+          endpoint_url?: string
+          id?: string
+          name?: string
+          url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
