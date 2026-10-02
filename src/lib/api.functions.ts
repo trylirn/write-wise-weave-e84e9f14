@@ -8,10 +8,10 @@ async function db() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
 }
-function check<T>(r: { data: T; error: { message: string } | null }): NonNullable<T> {
+function check<R extends { data: unknown; error: { message: string } | null }>(r: R): NonNullable<R["data"]> {
   if (r.error) throw new Error(r.error.message);
   if (r.data == null) throw new Error("Not found");
-  return r.data as NonNullable<T>;
+  return r.data as NonNullable<R["data"]>;
 }
 
 export type SiteAnalysis = {
