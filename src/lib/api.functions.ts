@@ -120,7 +120,7 @@ const agentInput = z.object({
 });
 
 export const listAgents = createServerFn({ method: "GET" }).handler(async () =>
-  ok(await (await db()).from("agents").select("*").order("created_at")),
+  check(await (await db()).from("agents").select("*").order("created_at")),
 );
 
 export const saveAgent = createServerFn({ method: "POST" })
@@ -145,7 +145,7 @@ export const deleteAgent = createServerFn({ method: "POST" })
 
 /* ---------------- Articles ---------------- */
 export const listArticles = createServerFn({ method: "GET" }).handler(async () =>
-  ok(
+  check(
     await (await db())
       .from("articles")
       .select("id,title,status,scheduled_at,published_at,updated_at,site_id,agent_id,last_error,slug")
@@ -318,7 +318,7 @@ export const scheduleArticle = createServerFn({ method: "POST" })
   });
 
 export const listLogs = createServerFn({ method: "GET" }).handler(async () =>
-  ok(
+  check(
     await (await db())
       .from("publish_logs")
       .select("*, articles(title), sites(name)")
