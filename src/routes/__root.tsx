@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -78,21 +79,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "The Desk — AI article agents" },
+      { name: "description", content: "Create AI writing agents that research, write and publish articles to your websites." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: appCss,
+        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Libre+Franklin:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
   shellComponent: RootShell,
@@ -115,13 +115,50 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+const NAV = [
+  { to: "/", label: "Front page" },
+  { to: "/write", label: "Write" },
+  { to: "/agents", label: "Agents" },
+  { to: "/sites", label: "Websites" },
+  { to: "/log", label: "Publishing log" },
+] as const;
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <div className="min-h-screen">
+        <header className="border-b-4 border-double border-foreground">
+          <div className="mx-auto max-w-6xl px-6 pt-6">
+            <div className="flex items-end justify-between border-b border-foreground pb-3">
+              <Link to="/" className="font-serif text-4xl font-extrabold tracking-tight">
+                The Desk
+              </Link>
+              <span className="hidden font-mono text-xs uppercase tracking-widest text-muted-foreground sm:block">
+                AI newsroom · research · write · publish
+              </span>
+            </div>
+            <nav className="flex flex-wrap gap-6 py-3 text-sm font-medium uppercase tracking-wider">
+              {NAV.map((n) => (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  activeOptions={{ exact: n.to === "/" }}
+                  className="text-muted-foreground hover:text-foreground"
+                  activeProps={{ className: "text-accent" }}
+                >
+                  {n.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </header>
+        <main className="mx-auto max-w-6xl px-6 py-10">
+          <Outlet />
+        </main>
+      </div>
+      <Toaster richColors position="bottom-right" />
     </QueryClientProvider>
   );
 }
