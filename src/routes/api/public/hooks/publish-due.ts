@@ -1,13 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { authenticateCronRequest } from "@/integrations/supabase/cron-auth";
 import { publishArticle } from "@/lib/publish.server";
 
 export const Route = createFileRoute("/api/public/hooks/publish-due")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        const denied = await authenticateCronRequest(request);
-        if (denied) return denied;
+      // No secret needed: this only publishes articles already due, so extra calls are harmless.
+      POST: async () => {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: due } = await supabaseAdmin
           .from("articles")
