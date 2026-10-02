@@ -8,6 +8,9 @@ async function db() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
 }
+function ok(r: { error: { message: string } | null }) {
+  if (r.error) throw new Error(r.error.message);
+}
 function check<R extends { data: unknown; error: { message: string } | null }>(r: R): NonNullable<R["data"]> {
   if (r.error) throw new Error(r.error.message);
   if (r.data == null) throw new Error("Not found");
@@ -47,7 +50,7 @@ export const saveSite = createServerFn({ method: "POST" })
     const { id, api_key, ...rest } = data;
     const patch = api_key ? { ...rest, api_key } : rest;
     if (id) {
-      check(await sb.from("sites").update(patch).eq("id", id));
+      ok(await sb.from("sites").update(patch).eq("id", id));
       return { id };
     }
     const count = check(await sb.from("sites").select("id")).length;
@@ -59,7 +62,7 @@ export const saveSite = createServerFn({ method: "POST" })
 export const deleteSite = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
-    check(await (await db()).from("sites").delete().eq("id", data.id));
+    ok(await (await db()).from("sites").delete().eq("id", data.id));
     return { ok: true };
   });
 
@@ -99,7 +102,7 @@ export const analyzeSite = createServerFn({ method: "POST" })
     );
     const analysis = parseJson<SiteAnalysis>(text);
     if (data.id) {
-      check(await (await db()).from("sites").update({ analysis, analyzed_at: new Date().toISOString(), url: data.url }).eq("id", data.id));
+      ok(await (await db()).from("sites").update({ analysis, analyzed_at: new Date().toISOString(), url: data.url }).eq("id", data.id));
     }
     return analysis;
   });
@@ -117,7 +120,7 @@ const agentInput = z.object({
 });
 
 export const listAgents = createServerFn({ method: "GET" }).handler(async () =>
-  check(await (await db()).from("agents").select("*").order("created_at")),
+  ok(await (await db()).from("agents").select("*").order("created_at")),
 );
 
 export const saveAgent = createServerFn({ method: "POST" })
@@ -126,7 +129,7 @@ export const saveAgent = createServerFn({ method: "POST" })
     const sb = await db();
     const { id, ...rest } = data;
     if (id) {
-      check(await sb.from("agents").update(rest).eq("id", id));
+      ok(await sb.from("agents").update(rest).eq("id", id));
       return { id };
     }
     const row = check(await sb.from("agents").insert(rest).select("id").single());
@@ -136,13 +139,13 @@ export const saveAgent = createServerFn({ method: "POST" })
 export const deleteAgent = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
-    check(await (await db()).from("agents").delete().eq("id", data.id));
+    ok(await (await db()).from("agents").delete().eq("id", data.id));
     return { ok: true };
   });
 
 /* ---------------- Articles ---------------- */
 export const listArticles = createServerFn({ method: "GET" }).handler(async () =>
-  check(
+  ok(
     await (await db())
       .from("articles")
       .select("id,title,status,scheduled_at,published_at,updated_at,site_id,agent_id,last_error,slug")
@@ -256,7 +259,7 @@ export const saveArticle = createServerFn({ method: "POST" })
   .inputValidator((d) => articleInput.parse(d))
   .handler(async ({ data }) => {
     const { id, ...rest } = data;
-    check(await (await db()).from("articles").update({ ...rest, updated_at: new Date().toISOString() }).eq("id", id));
+    ok(await (await db()).from("articles").update({ ...rest, updated_at: new Date().toISOString() }).eq("id", id));
     return { ok: true };
   });
 
@@ -270,7 +273,7 @@ export const optimizeArticle = createServerFn({ method: "POST" })
       `Improve this article. ${data.instruction || "Tighten the writing, strengthen headings for SEO, and improve the SEO title and meta description."}\nKeywords: ${a.keywords}\n\nCURRENT JSON:\n${JSON.stringify({ title: a.title, seo_title: a.seo_title, slug: a.slug, meta_description: a.meta_description, excerpt: a.excerpt, content_markdown: a.content_markdown })}\n\nReturn JSON with the same keys.`,
     );
     const g = parseJson<Partial<Generated>>(text);
-    check(
+    ok(
       await sb
         .from("articles")
         .update({
@@ -290,7 +293,7 @@ export const optimizeArticle = createServerFn({ method: "POST" })
 export const deleteArticle = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
-    check(await (await db()).from("articles").delete().eq("id", data.id));
+    ok(await (await db()).from("articles").delete().eq("id", data.id));
     return { ok: true };
   });
 
@@ -301,7 +304,7 @@ export const publishNow = createServerFn({ method: "POST" })
 export const scheduleArticle = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid(), scheduled_at: z.string().datetime().nullable() }).parse(d))
   .handler(async ({ data }) => {
-    check(
+    ok(
       await (await db())
         .from("articles")
         .update({
@@ -315,7 +318,7 @@ export const scheduleArticle = createServerFn({ method: "POST" })
   });
 
 export const listLogs = createServerFn({ method: "GET" }).handler(async () =>
-  check(
+  ok(
     await (await db())
       .from("publish_logs")
       .select("*, articles(title), sites(name)")
