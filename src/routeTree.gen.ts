@@ -14,6 +14,7 @@ import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as LogRouteImport } from './routes/log'
 import { Route as SitesRouteImport } from './routes/sites'
 import { Route as WriteRouteImport } from './routes/write'
+import { Route as ArticlesIdRouteImport } from './routes/articles.$id'
 import { Route as ApiPublicHooksPublishDueRouteImport } from './routes/api/public/hooks/publish-due'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const WriteRoute = WriteRouteImport.update({
   path: '/write',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ArticlesIdRoute = ArticlesIdRouteImport.update({
+  id: '/articles/$id',
+  path: '/articles/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksPublishDueRoute =
   ApiPublicHooksPublishDueRouteImport.update({
     id: '/api/public/hooks/publish-due',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/log': typeof LogRoute
   '/sites': typeof SitesRoute
   '/write': typeof WriteRoute
+  '/articles/$id': typeof ArticlesIdRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
 }
 export interface FileRoutesByTo {
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/log': typeof LogRoute
   '/sites': typeof SitesRoute
   '/write': typeof WriteRoute
+  '/articles/$id': typeof ArticlesIdRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
 }
 export interface FileRoutesById {
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/log': typeof LogRoute
   '/sites': typeof SitesRoute
   '/write': typeof WriteRoute
+  '/articles/$id': typeof ArticlesIdRoute
   '/api/public/hooks/publish-due': typeof ApiPublicHooksPublishDueRoute
 }
 export interface FileRouteTypes {
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/log'
     | '/sites'
     | '/write'
+    | '/articles/$id'
     | '/api/public/hooks/publish-due'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/log'
     | '/sites'
     | '/write'
+    | '/articles/$id'
     | '/api/public/hooks/publish-due'
   id:
     | '__root__'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/log'
     | '/sites'
     | '/write'
+    | '/articles/$id'
     | '/api/public/hooks/publish-due'
   fileRoutesById: FileRoutesById
 }
@@ -106,6 +118,7 @@ export interface RootRouteChildren {
   LogRoute: typeof LogRoute
   SitesRoute: typeof SitesRoute
   WriteRoute: typeof WriteRoute
+  ArticlesIdRoute: typeof ArticlesIdRoute
   ApiPublicHooksPublishDueRoute: typeof ApiPublicHooksPublishDueRoute
 }
 
@@ -146,6 +159,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WriteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/articles/$id': {
+      id: '/articles/$id'
+      path: '/articles/$id'
+      fullPath: '/articles/$id'
+      preLoaderRoute: typeof ArticlesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/publish-due': {
       id: '/api/public/hooks/publish-due'
       path: '/api/public/hooks/publish-due'
@@ -162,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogRoute: LogRoute,
   SitesRoute: SitesRoute,
   WriteRoute: WriteRoute,
+  ArticlesIdRoute: ArticlesIdRoute,
   ApiPublicHooksPublishDueRoute: ApiPublicHooksPublishDueRoute,
 }
 export const routeTree = rootRouteImport
