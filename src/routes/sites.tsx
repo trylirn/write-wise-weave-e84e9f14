@@ -116,7 +116,7 @@ function SiteCard({ site, onEdit, onDelete }: { site: SiteRow; onEdit: () => voi
   const a = site.analysis as SiteAnalysis | null;
 
   const run = async () => {
-    if (!site.url) return toast.error("Add the website link first");
+    if (!site.url) { toast.error("Add the website link first"); return; }
     setBusy(true);
     try {
       await analyze({ data: { id: site.id, url: site.url } });

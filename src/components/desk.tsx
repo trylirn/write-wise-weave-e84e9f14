@@ -23,7 +23,7 @@ const STATUS: Record<string, string> = {
 
 export function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={cn("inline-block px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider", STATUS[status] ?? STATUS.draft)}>
+    <span className={cn("inline-block px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider", STATUS[status] ?? STATUS["draft"])}>
       {status}
     </span>
   );

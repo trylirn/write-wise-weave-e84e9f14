@@ -37,8 +37,8 @@ function WritePage() {
   const selected = list.find((a) => a.id === (agentId || list[0]?.id));
 
   const onGo = async () => {
-    if (!selected) return toast.error("Create an agent first");
-    if (topic.trim().length < 3) return toast.error("Give the agent a topic");
+    if (!selected) { toast.error("Create an agent first"); return; }
+    if (topic.trim().length < 3) { toast.error("Give the agent a topic"); return; }
     setBusy(true);
     try {
       const { id } = await generate({ data: { agent_id: selected.id, topic, keywords, research } });
