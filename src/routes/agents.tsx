@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/agents")({
   head: () => ({
@@ -31,6 +32,8 @@ type Draft = {
   target_length: number;
   formatting_rules: string;
   site_id: string | null;
+  autopilot: boolean;
+  articles_per_day: number;
 };
 const blank: Draft = {
   name: "",
@@ -40,6 +43,8 @@ const blank: Draft = {
   target_length: 1200,
   formatting_rules: "Use short paragraphs, descriptive ## subheadings, at least one bulleted list, and a clear conclusion.",
   site_id: null,
+  autopilot: true,
+  articles_per_day: 1,
 };
 
 function AgentsPage() {
@@ -108,6 +113,17 @@ function AgentsPage() {
             <div className="md:col-span-2">
               <Label className="mb-1 block">Formatting rules</Label>
               <Textarea rows={3} value={d.formatting_rules} onChange={(e) => setD({ ...d, formatting_rules: e.target.value })} />
+            </div>
+            <label className="flex items-center gap-3 border border-border bg-background p-3">
+              <Switch checked={d.autopilot} onCheckedChange={(v) => setD({ ...d, autopilot: v })} />
+              <span>
+                <span className="block font-medium">Autopilot</span>
+                <span className="text-sm text-muted-foreground">Picks topics, writes, checks and publishes on its own.</span>
+              </span>
+            </label>
+            <div>
+              <Label className="mb-1 block">Articles per day</Label>
+              <Input type="number" min={1} max={24} value={d.articles_per_day} onChange={(e) => setD({ ...d, articles_per_day: Math.min(24, Math.max(1, Number(e.target.value) || 1)) })} />
             </div>
           </div>
           <div className="mt-5 flex gap-2">

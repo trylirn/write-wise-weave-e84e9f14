@@ -16,10 +16,15 @@ export type Database = {
     Tables: {
       agents: {
         Row: {
+          articles_per_day: number
+          autopilot: boolean
           created_at: string
           formatting_rules: string
           id: string
+          last_error: string | null
+          last_run_at: string | null
           name: string
+          next_run_at: string | null
           persona: string
           site_id: string | null
           target_length: number
@@ -27,10 +32,15 @@ export type Database = {
           writing_style: string
         }
         Insert: {
+          articles_per_day?: number
+          autopilot?: boolean
           created_at?: string
           formatting_rules?: string
           id?: string
+          last_error?: string | null
+          last_run_at?: string | null
           name: string
+          next_run_at?: string | null
           persona?: string
           site_id?: string | null
           target_length?: number
@@ -38,10 +48,15 @@ export type Database = {
           writing_style?: string
         }
         Update: {
+          articles_per_day?: number
+          autopilot?: boolean
           created_at?: string
           formatting_rules?: string
           id?: string
+          last_error?: string | null
+          last_run_at?: string | null
           name?: string
+          next_run_at?: string | null
           persona?: string
           site_id?: string | null
           target_length?: number
@@ -61,6 +76,7 @@ export type Database = {
       articles: {
         Row: {
           agent_id: string | null
+          auto_generated: boolean
           citations: Json
           content_markdown: string
           cover_image_prompt: string
@@ -72,6 +88,8 @@ export type Database = {
           meta_description: string
           published_at: string | null
           scheduled_at: string | null
+          seo_report: Json
+          seo_score: number | null
           seo_title: string
           site_id: string | null
           slug: string
@@ -83,6 +101,7 @@ export type Database = {
         }
         Insert: {
           agent_id?: string | null
+          auto_generated?: boolean
           citations?: Json
           content_markdown?: string
           cover_image_prompt?: string
@@ -94,6 +113,8 @@ export type Database = {
           meta_description?: string
           published_at?: string | null
           scheduled_at?: string | null
+          seo_report?: Json
+          seo_score?: number | null
           seo_title?: string
           site_id?: string | null
           slug?: string
@@ -105,6 +126,7 @@ export type Database = {
         }
         Update: {
           agent_id?: string | null
+          auto_generated?: boolean
           citations?: Json
           content_markdown?: string
           cover_image_prompt?: string
@@ -116,6 +138,8 @@ export type Database = {
           meta_description?: string
           published_at?: string | null
           scheduled_at?: string | null
+          seo_report?: Json
+          seo_score?: number | null
           seo_title?: string
           site_id?: string | null
           slug?: string
@@ -141,6 +165,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      autopilot_lock: {
+        Row: {
+          id: number
+          locked_until: string
+        }
+        Insert: {
+          id: number
+          locked_until?: string
+        }
+        Update: {
+          id?: number
+          locked_until?: string
+        }
+        Relationships: []
       }
       publish_logs: {
         Row: {
