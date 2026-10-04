@@ -117,6 +117,8 @@ const agentInput = z.object({
   target_length: z.number().int().min(200).max(6000),
   formatting_rules: z.string().max(4000),
   site_id: z.string().uuid().nullable(),
+  autopilot: z.boolean().default(false),
+  articles_per_day: z.number().int().min(1).max(24).default(1),
 });
 
 export const listAgents = createServerFn({ method: "GET" }).handler(async () =>
@@ -129,10 +131,12 @@ export const saveAgent = createServerFn({ method: "POST" })
     const sb = await db();
     const { id, ...rest } = data;
     if (id) {
-      ok(await sb.from("agents").update(rest).eq("id", id));
+      const prev = check(await sb.from("agents").select("autopilot").eq("id", id).single());
+      const patch = rest.autopilot && !prev.autopilot ? { ...rest, next_run_at: new Date().toISOString(), last_error: null } : rest;
+      ok(await sb.from("agents").update(patch).eq("id", id));
       return { id };
     }
-    const row = check(await sb.from("agents").insert(rest).select("id").single());
+    const row = check(await sb.from("agents").insert({ ...rest, next_run_at: rest.autopilot ? new Date().toISOString() : null }).select("id").single());
     return { id: row.id };
   });
 
@@ -171,76 +175,21 @@ type Generated = {
 
 export const generateArticle = createServerFn({ method: "POST" })
   .inputValidator((d) =>
-    z
-      .object({
-        agent_id: z.string().uuid(),
-        topic: z.string().min(3).max(500),
-        keywords: z.string().max(500),
-        research: z.boolean(),
-      })
-      .parse(d),
+    z.object({ agent_id: z.string().uuid(), topic: z.string().min(3).max(500), keywords: z.string().max(500), research: z.boolean() }).parse(d),
   )
   .handler(async ({ data }) => {
-    const sb = await db();
-    const agent = check(await sb.from("agents").select("*").eq("id", data.agent_id).single());
-    const site = agent.site_id ? check(await sb.from("sites").select("*").eq("id", agent.site_id).single()) : null;
-    const analysis = site?.analysis as SiteAnalysis | null;
-
-    let sources: { title: string; url: string; snippet: string; date?: string }[] = [];
-    if (data.research) {
-      const kws = data.keywords.split(",").map((k) => k.trim()).filter(Boolean);
-      sources = await perplexitySearch([data.topic, ...kws.slice(0, 3).map((k) => `${k} ${new Date().getFullYear()}`)]);
-    }
-
-    const system = [
-      `You are "${agent.name}", an expert article writer.`,
-      agent.persona && `PERSONA: ${agent.persona}`,
-      agent.tone && `TONE: ${agent.tone}`,
-      agent.writing_style && `WRITING STYLE: ${agent.writing_style}`,
-      `TARGET LENGTH: about ${agent.target_length} words in the article body.`,
-      agent.formatting_rules && `FORMATTING RULES: ${agent.formatting_rules}`,
-      site && `PUBLICATION: ${site.name} (${site.url}).`,
-      analysis &&
-        `BRAND KNOWLEDGE: niche=${analysis.niche}; audience=${analysis.audience}; tone=${analysis.tone_of_voice}; guidelines: ${analysis.writing_guidelines?.join(" | ")}`,
-      "Reply with JSON only.",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const sourceBlock = sources.length
-      ? `LIVE WEB RESEARCH (cite inline as markdown links [text](url) where you use a fact, and end with a "## Sources" list):\n${sources
-          .map((s, i) => `[${i + 1}] ${s.title} — ${s.url}${s.date ? ` (${s.date})` : ""}\n${s.snippet}`)
-          .join("\n\n")}`
-      : "No live research supplied; do not invent statistics or sources.";
-
-    const text = await generateText(
-      system,
-      `Write an SEO-optimized article.\nTOPIC: ${data.topic}\nKEYWORDS: ${data.keywords || "(choose sensible ones)"}\nToday: ${new Date().toDateString()}\n\n${sourceBlock}\n\nReturn JSON with keys: title, seo_title (max 60 chars), slug (kebab-case), meta_description (max 155 chars), excerpt (1-2 sentences), content_markdown (full article in markdown using ## and ### headings, no H1), cover_image_prompt (a vivid prompt for an image generator), tags (array of 3-6 strings).`,
-    );
-    const g = parseJson<Generated>(text);
-    const row = check(
-      await sb
-        .from("articles")
-        .insert({
-          agent_id: agent.id,
-          site_id: agent.site_id,
-          topic: data.topic,
-          keywords: data.keywords,
-          title: g.title ?? data.topic,
-          seo_title: (g.seo_title ?? "").slice(0, 70),
-          slug: (g.slug ?? "").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, ""),
-          meta_description: (g.meta_description ?? "").slice(0, 170),
-          excerpt: g.excerpt ?? "",
-          content_markdown: g.content_markdown ?? "",
-          cover_image_prompt: g.cover_image_prompt ?? "",
-          tags: Array.isArray(g.tags) ? g.tags.slice(0, 8) : [],
-          citations: sources.map(({ title, url }) => ({ title, url })),
-        })
-        .select("id")
-        .single(),
-    );
-    return { id: row.id };
+    const { writeArticle } = await import("./autopilot.server");
+    return writeArticle(data);
   });
+
+export const autopilotStatus = createServerFn({ method: "GET" }).handler(async () => {
+  const sb = await db();
+  const agents = check(await sb.from("agents").select("id,name,site_id,autopilot,articles_per_day,next_run_at,last_run_at,last_error").order("created_at"));
+  const articles = check(
+    await sb.from("articles").select("id,title,keywords,status,seo_score,agent_id,created_at,auto_generated").eq("auto_generated", true).order("created_at", { ascending: false }).limit(30),
+  );
+  return { agents, articles };
+});
 
 const articleInput = z.object({
   id: z.string().uuid(),

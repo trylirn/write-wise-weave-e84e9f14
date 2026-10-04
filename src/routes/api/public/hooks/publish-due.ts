@@ -26,7 +26,9 @@ export const Route = createFileRoute("/api/public/hooks/publish-due")({
           if (!claimed?.length) continue;
           results.push({ id: row.id, ...(await publishArticle(row.id)) });
         }
-        return Response.json({ processed: results.length, results });
+        const { runDueAutopilot } = await import("@/lib/autopilot.server");
+        const autopilot = await runDueAutopilot().catch((e) => ({ error: String(e) }));
+        return Response.json({ processed: results.length, results, autopilot });
       },
     },
   },
