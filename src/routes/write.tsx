@@ -1,119 +1,79 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
-import { toast } from "sonner";
-import { listAgents, listSites, generateArticle } from "@/lib/api.functions";
-import { PageHeader, Empty, errMsg } from "@/components/desk";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { autopilotStatus, listSites } from "@/lib/api.functions";
+import { PageHeader, Empty } from "@/components/desk";
 
 export const Route = createFileRoute("/write")({
   head: () => ({
     meta: [
-      { title: "Write — The Desk" },
-      { name: "description", content: "Commission an AI agent to research the live web and write an SEO-ready article." },
-      { property: "og:title", content: "Write — The Desk" },
-      { property: "og:description", content: "Commission a researched, SEO-ready article from an AI agent." },
+      { title: "Autopilot — The Desk" },
+      { name: "description", content: "Agents research, pick topics and keywords, write, check against Google's guidelines and publish automatically." },
+      { property: "og:title", content: "Autopilot — The Desk" },
+      { property: "og:description", content: "Fully automated research, writing and publishing." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: WritePage,
 });
 
+const fmt = (s: string | null) => (s ? new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—");
+
 function WritePage() {
-  const navigate = useNavigate();
-  const agents = useQuery({ queryKey: ["agents"], queryFn: useServerFn(listAgents) });
+  const status = useQuery({ queryKey: ["autopilot"], queryFn: useServerFn(autopilotStatus), refetchInterval: 30_000 });
   const sites = useQuery({ queryKey: ["sites"], queryFn: useServerFn(listSites) });
-  const generate = useServerFn(generateArticle);
-  const [agentId, setAgentId] = useState("");
-  const [topic, setTopic] = useState("");
-  const [keywords, setKeywords] = useState("");
-  const [research, setResearch] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const agents = status.data?.agents ?? [];
+  const articles = status.data?.articles ?? [];
 
-  const list = agents.data ?? [];
-  const selected = list.find((a) => a.id === (agentId || list[0]?.id));
-
-  const onGo = async () => {
-    if (!selected) { toast.error("Create an agent first"); return; }
-    if (topic.trim().length < 3) { toast.error("Give the agent a topic"); return; }
-    setBusy(true);
-    try {
-      const { id } = await generate({ data: { agent_id: selected.id, topic, keywords, research } });
-      toast.success("Draft ready");
-      navigate({ to: "/articles/$id", params: { id } });
-    } catch (e) {
-      toast.error(errMsg(e));
-      setBusy(false);
-    }
-  };
-
-  if (agents.isSuccess && list.length === 0)
+  if (status.isSuccess && agents.length === 0)
     return (
       <div>
-        <PageHeader kicker="Assignment desk" title="Write" />
-        <Empty>
-          You need a writing agent first. <Link to="/agents" className="underline">Create one</Link>.
-        </Empty>
+        <PageHeader kicker="Autopilot desk" title="Autopilot" />
+        <Empty>Add a <Link to="/sites" className="underline">website</Link> and an <Link to="/agents" className="underline">agent</Link> — the agent takes it from there.</Empty>
       </div>
     );
 
   return (
     <div>
-      <PageHeader kicker="Assignment desk" title="Commission an article" />
-      <div className="grid gap-10 md:grid-cols-[1fr_320px]">
-        <div className="space-y-5">
-          <div>
-            <Label className="mb-1 block">Agent</Label>
-            <select
-              className="h-10 w-full border border-input bg-background px-3"
-              value={selected?.id ?? ""}
-              onChange={(e) => setAgentId(e.target.value)}
-            >
-              {list.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label className="mb-1 block">Topic or headline idea</Label>
-            <Input className="h-12 font-serif text-lg" value={topic} placeholder="The best hidden beaches in Portugal for 2026" onChange={(e) => setTopic(e.target.value)} />
-          </div>
-          <div>
-            <Label className="mb-1 block">Target keywords (comma separated)</Label>
-            <Input value={keywords} placeholder="hidden beaches portugal, algarve coves" onChange={(e) => setKeywords(e.target.value)} />
-          </div>
-          <label className="flex items-center gap-3 border border-border bg-card p-4">
-            <Switch checked={research} onCheckedChange={setResearch} />
-            <span>
-              <span className="block font-medium">Research the live web with Perplexity</span>
-              <span className="text-sm text-muted-foreground">Pulls current facts and sources and cites them in the article.</span>
-            </span>
-          </label>
-          <Button size="lg" onClick={onGo} disabled={busy}>
-            {busy ? (research ? "Researching & writing… (up to a minute)" : "Writing… (up to a minute)") : "Write the article"}
-          </Button>
-        </div>
-        <aside className="border-l border-border pl-6">
-          <p className="font-mono text-xs uppercase tracking-widest text-accent">The brief</p>
-          {selected && (
-            <div className="mt-2 space-y-2 text-sm">
-              <p className="font-serif text-xl font-semibold">{selected.name}</p>
-              <p>{selected.persona || "No persona set."}</p>
-              <p><b>Tone:</b> {selected.tone || "—"}</p>
-              <p><b>Length:</b> ~{selected.target_length} words</p>
-              <p><b>Publishes to:</b> {sites.data?.find((s) => s.id === selected.site_id)?.name ?? "No website"}</p>
-              {sites.data?.find((s) => s.id === selected.site_id)?.analysis ? (
-                <p className="text-success">Uses this website's analyzed voice & audience.</p>
-              ) : (
-                <p className="text-muted-foreground">Tip: analyze the website for better on-brand writing.</p>
-              )}
-            </div>
-          )}
-        </aside>
+      <PageHeader kicker="Autopilot desk" title="The newsroom runs itself" />
+      <p className="mb-8 max-w-2xl text-muted-foreground">
+        Each agent researches its site's niche with Perplexity, picks a fresh topic and keywords, writes, checks the article against Google's SEO starter guide, fixes issues, and publishes. Runs only on the published app.
+      </p>
+      <div className="grid gap-6 md:grid-cols-3">
+        {agents.map((a) => (
+          <article key={a.id} className="border border-border bg-card p-5">
+            <p className={`font-mono text-xs uppercase tracking-widest ${a.autopilot ? "text-success" : "text-muted-foreground"}`}>
+              {a.autopilot ? "● On autopilot" : "○ Paused"}
+            </p>
+            <h3 className="mt-1 text-xl font-semibold">{a.name}</h3>
+            <p className="text-sm text-muted-foreground">{sites.data?.find((s) => s.id === a.site_id)?.name ?? "No website"}</p>
+            <p className="mt-3 text-sm"><b>{a.articles_per_day}</b> article{a.articles_per_day > 1 ? "s" : ""} per day</p>
+            <p className="text-sm">Next: {a.autopilot ? fmt(a.next_run_at) : "—"}</p>
+            <p className="text-sm">Last: {fmt(a.last_run_at)}</p>
+            {a.last_error && <p className="mt-2 text-sm text-destructive">{a.last_error}</p>}
+          </article>
+        ))}
       </div>
+      <h2 className="mb-3 mt-10 text-2xl font-semibold">Recent autopilot articles</h2>
+      {articles.length === 0 ? (
+        <Empty>No automated articles yet.</Empty>
+      ) : (
+        <ul className="divide-y divide-border border-y border-border">
+          {articles.map((x) => (
+            <li key={x.id} className="flex items-center justify-between gap-4 py-3">
+              <div>
+                <Link to="/articles/$id" params={{ id: x.id }} className="font-serif text-lg hover:underline">{x.title}</Link>
+                <p className="text-xs text-muted-foreground">{x.keywords} · {fmt(x.created_at)}</p>
+              </div>
+              <div className="text-right font-mono text-xs">
+                <p>{x.status}</p>
+                <p>Google check: {x.seo_score ?? "—"}/100</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
