@@ -261,6 +261,19 @@ function ArticlePage() {
             </Button>
           </section>
 
+          {(a.seo_report as { rule: string; passed: boolean; note: string }[])?.length > 0 && (
+            <section className="border border-border bg-card p-4">
+              <p className="mb-2 font-mono text-xs uppercase tracking-widest text-accent">Google guideline check · {a.seo_score ?? "—"}/100</p>
+              <ul className="space-y-1 text-sm">
+                {(a.seo_report as { rule: string; passed: boolean; note: string }[]).map((r) => (
+                  <li key={r.rule}>
+                    <span className={r.passed ? "text-success" : "text-destructive"}>{r.passed ? "✓" : "✗"}</span> <b>{r.rule}</b> — {r.note}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {(a.citations as { title: string; url: string }[])?.length > 0 && (
             <section className="border border-border bg-card p-4">
               <p className="mb-2 font-mono text-xs uppercase tracking-widest text-accent">Research sources</p>
