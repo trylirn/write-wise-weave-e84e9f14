@@ -44,6 +44,7 @@ export async function discoverTopic(agentId: string) {
   const text = await generateText(
     "You are an SEO content strategist. Reply with JSON only.",
     `Choose ONE fresh article topic for this publication.\nNiche: ${niche}\nAudience: ${a?.audience ?? "general"}\nThemes: ${(a?.content_themes ?? []).join(", ")}\nAgent persona: ${agent.persona}\n\nLIVE RESEARCH:\n${research.map((r) => `- ${r.title}: ${r.snippet}`).join("\n")}\n\nALREADY COVERED (avoid similar topics):\n${(past ?? []).map((p) => `- ${p.title}`).join("\n") || "(none)"}\n\nPick a topic people are actively searching for now, with real search intent. Return JSON {"topic": string, "keywords": [3-6 strings, primary first]}.`,
+    "low",
   );
   const g = parseJson<{ topic: string; keywords: string[] }>(text);
   return { topic: g.topic, keywords: (g.keywords ?? []).slice(0, 6).join(", "), research };
@@ -106,7 +107,7 @@ function clean(g: Partial<Gen>, fallbackTitle: string) {
   };
 }
 
-/** Scores against Google's guide; revises once if needed. Saves score + report. */
+/** One call scores against Google's guide and returns fixes; re-checks only if score < 85. */
 export async function reviewAndFix(articleId: string) {
   const sb = await db();
   const load = async () => {
@@ -114,28 +115,28 @@ export async function reviewAndFix(articleId: string) {
     if (!data) throw new Error("Article not found");
     return data;
   };
-  const review = async (a: Awaited<ReturnType<typeof load>>) => {
+  type R = { score: number; items: SeoItem[]; fixed?: Partial<Gen> | null };
+  const reviewFix = async (a: Awaited<ReturnType<typeof load>>) => {
     const t = await generateText(
-      "You are a strict Google Search quality reviewer. Reply with JSON only.",
-      `${GOOGLE_RULES}\n\nReview this article against each rule. Keywords: ${a.keywords}\nARTICLE JSON:\n${JSON.stringify({ title: a.title, seo_title: a.seo_title, slug: a.slug, meta_description: a.meta_description, content_markdown: a.content_markdown })}\n\nReturn JSON {"score": 0-100, "items": [{"rule": short name, "passed": boolean, "note": one sentence}]}.`,
+      "You are a strict Google Search quality reviewer and SEO editor. Reply with JSON only.",
+      `${GOOGLE_RULES}\n\nReview this article against each rule. Keywords: ${a.keywords}\nARTICLE JSON:\n${JSON.stringify({ title: a.title, seo_title: a.seo_title, slug: a.slug, meta_description: a.meta_description, excerpt: a.excerpt, content_markdown: a.content_markdown })}\n\nReturn JSON {"score": 0-100 for the article AFTER your fixes, "items": [{"rule": short name, "passed": boolean (after fixes), "note": one sentence, prefix "Fixed: " if you fixed it}], "fixed": null if nothing needed fixing, otherwise an object with only the changed keys among title, seo_title, slug, meta_description, excerpt, content_markdown}. Keep facts, voice and citations intact.`,
+      "low",
     );
-    return parseJson<{ score: number; items: SeoItem[] }>(t);
+    return parseJson<R>(t);
   };
   let a = await load();
-  let r = await review(a);
-  const failed = (r.items ?? []).filter((i) => !i.passed);
-  if (failed.length || r.score < 85) {
-    const t = await generateText(
-      "You are an SEO editor. Fix issues while keeping facts, voice and citations intact. Reply with JSON only.",
-      `Fix these Google guideline issues:\n${failed.map((i) => `- ${i.rule}: ${i.note}`).join("\n") || "- raise overall quality"}\n\nCURRENT JSON:\n${JSON.stringify({ title: a.title, seo_title: a.seo_title, slug: a.slug, meta_description: a.meta_description, excerpt: a.excerpt, content_markdown: a.content_markdown })}\n\nReturn JSON with the same keys.`,
-    );
-    const g = parseJson<Partial<Gen>>(t);
-    const c = clean({ ...a, ...g, tags: a.tags }, a.title);
+  let r = await reviewFix(a);
+  if (r.fixed && Object.keys(r.fixed).length) {
+    const c = clean({ ...a, ...r.fixed, tags: a.tags }, a.title);
     await sb.from("articles").update({ ...c, updated_at: new Date().toISOString() }).eq("id", a.id);
-    a = await load();
-    const fixedRules = new Set(failed.map((i) => i.rule));
-    r = await review(a);
-    r.items = (r.items ?? []).map((i) => (i.passed && fixedRules.has(i.rule) ? { ...i, note: `Fixed: ${i.note}` } : i));
+    if ((r.score ?? 0) < 85) {
+      a = await load();
+      const r2 = await reviewFix(a);
+      if (r2.fixed && Object.keys(r2.fixed).length) {
+        await sb.from("articles").update({ ...clean({ ...a, ...r2.fixed, tags: a.tags }, a.title), updated_at: new Date().toISOString() }).eq("id", a.id);
+      }
+      r = r2;
+    }
   }
   await sb.from("articles").update({ seo_score: Math.round(r.score ?? 0), seo_report: r.items ?? [] }).eq("id", a.id);
   return r;
@@ -170,7 +171,7 @@ export async function runDueAutopilot() {
       return r;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      const pause = /credits|\[40[23]\]/i.test(msg);
+      const pause = /credits|limit reached|\[40[23]\]/i.test(msg);
       await sb.from("agents").update({ last_error: msg, ...(pause ? { autopilot: false } : {}) }).eq("id", agent.id);
       return { error: msg, paused: pause };
     }
