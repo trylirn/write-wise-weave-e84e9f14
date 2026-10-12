@@ -60,6 +60,77 @@ async function generateWithLovable(system: string, prompt: string, effort: "low"
   return text;
 }
 
+/* ---------- DeepSeek = the main AI. The Lovable AI above is the backup. ---------- */
+const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+const DEEPSEEK_MODEL = "deepseek-flash";
+
+async function generateWithDeepSeek(system: string, prompt: string): Promise<string> {
+  const apiKey = process.env["DEEPSEEK_API_KEY"]?.trim();
+  if (!apiKey) throw new Error("DeepSeek is not configured (missing DEEPSEEK_API_KEY).");
+  const body = JSON.stringify({
+    model: DEEPSEEK_MODEL,
+    messages: [
+      { role: "system", content: `${system}\n\nRespond with one valid JSON object only. No markdown fences.` },
+      { role: "user", content: prompt },
+    ],
+    response_format: { type: "json_object" },
+    thinking: { type: "disabled" }, // faster and cheaper. Change "disabled" to "enabled" for deeper thinking.
+    temperature: 0.7,
+    max_tokens: 16000,
+    stream: false,
+  });
+  let lastError = new Error("DeepSeek request failed.");
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(DEEPSEEK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body,
+        signal: AbortSignal.timeout(180_000),
+      });
+    } catch (e) {
+      throw new Error(`DeepSeek could not be reached: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    if (res.ok) {
+      const json = (await res.json()) as {
+        choices?: { message?: { content?: string | null }; finish_reason?: string }[];
+      };
+      const choice = json.choices?.[0];
+      const text = choice?.message?.content?.trim() ?? "";
+      if (!text) throw new Error("DeepSeek returned an empty answer.");
+      if (choice?.finish_reason === "length") throw new Error("DeepSeek's answer was cut off (too long).");
+      return text;
+    }
+    const raw = await res.text();
+    let msg = raw.slice(0, 300);
+    try { msg = (JSON.parse(raw)?.error?.message ?? msg) as string; } catch { /* keep raw */ }
+    lastError = new Error(`DeepSeek request failed [${res.status}]: ${msg}`);
+    const worthRetrying = res.status === 429 || res.status === 500 || res.status === 503;
+    if (!worthRetrying || attempt === 2) throw lastError;
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+  throw lastError;
+}
+
+/** Used by the whole app: tries DeepSeek first and only uses the Lovable AI if DeepSeek fails. */
+export async function generateText(system: string, prompt: string, effort: "low" | "medium" = "medium"): Promise<string> {
+  if (!process.env["DEEPSEEK_API_KEY"]) return generateWithLovable(system, prompt, effort);
+  try {
+    const text = await generateWithDeepSeek(system, prompt);
+    try { parseJson(text); } catch { throw new Error("DeepSeek's answer was not valid JSON."); }
+    return text;
+  } catch (e) {
+    console.error("[AI] DeepSeek failed, using the backup AI instead:", e instanceof Error ? e.message : e);
+  }
+  try {
+    return await generateWithLovable(system, prompt, effort);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`${msg} (DeepSeek was tried first and also failed. Check your DeepSeek key and balance.)`);
+  }
+}
+
 export function parseJson<T>(text: string): T {
   const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
   try {
