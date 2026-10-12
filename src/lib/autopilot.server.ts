@@ -1,6 +1,7 @@
 import { generateText, parseJson } from "./ai.server";
 import { perplexitySearch, type SearchResult } from "./perplexity.server";
 import { publishArticle } from "./publish.server";
+import { getGoogleRules } from "./google-rules.server";
 
 type Analysis = { niche?: string; audience?: string; tone_of_voice?: string; content_themes?: string[]; writing_guidelines?: string[] } | null;
 
@@ -14,17 +15,6 @@ type Gen = {
   content_markdown: string; cover_image_prompt: string; tags: string[];
 };
 export type SeoItem = { rule: string; passed: boolean; note: string };
-
-const GOOGLE_RULES = `Google Search SEO starter guide checks:
-1. Helpful, reliable, people-first content written for the audience, not search engines.
-2. Unique, accurate, descriptive title (seo_title <= 60 chars).
-3. Meta description summarizes the page clearly (<= 155 chars).
-4. Clear structure with descriptive ## / ### headings; easy to read, short paragraphs.
-5. Descriptive, readable slug made of meaningful words.
-6. Keywords used naturally; no keyword stuffing.
-7. Facts are supported by cited sources; no invented statistics.
-8. Original content that adds value, up to date, no filler or duplication.
-9. Links use descriptive anchor text.`;
 
 export async function discoverTopic(agentId: string) {
   const sb = await db();
@@ -73,7 +63,7 @@ export async function writeArticle(opts: { agent_id: string; topic: string; keyw
     agent.formatting_rules && `FORMATTING RULES: ${agent.formatting_rules}`,
     site && `PUBLICATION: ${site.name} (${site.url}).`,
     analysis && `BRAND KNOWLEDGE: niche=${analysis.niche}; audience=${analysis.audience}; tone=${analysis.tone_of_voice}; guidelines: ${analysis.writing_guidelines?.join(" | ")}`,
-    `Follow these rules:\n${GOOGLE_RULES}`,
+    `Follow these rules:\n${await getGoogleRules()}`,
     "Reply with JSON only.",
   ].filter(Boolean).join("\n");
   const sourceBlock = sources.length
@@ -119,7 +109,7 @@ export async function reviewAndFix(articleId: string) {
   const reviewFix = async (a: Awaited<ReturnType<typeof load>>) => {
     const t = await generateText(
       "You are a strict Google Search quality reviewer and SEO editor. Reply with JSON only.",
-      `${GOOGLE_RULES}\n\nReview this article against each rule. Keywords: ${a.keywords}\nARTICLE JSON:\n${JSON.stringify({ title: a.title, seo_title: a.seo_title, slug: a.slug, meta_description: a.meta_description, excerpt: a.excerpt, content_markdown: a.content_markdown })}\n\nReturn JSON {"score": 0-100 for the article AFTER your fixes, "items": [{"rule": short name, "passed": boolean (after fixes), "note": one sentence, prefix "Fixed: " if you fixed it}], "fixed": null if nothing needed fixing, otherwise an object with only the changed keys among title, seo_title, slug, meta_description, excerpt, content_markdown}. Keep facts, voice and citations intact.`,
+      `${await getGoogleRules()}\n\nReview this article against each rule. Keywords: ${a.keywords}\nARTICLE JSON:\n${JSON.stringify({ title: a.title, seo_title: a.seo_title, slug: a.slug, meta_description: a.meta_description, excerpt: a.excerpt, content_markdown: a.content_markdown })}\n\nReturn JSON {"score": 0-100 for the article AFTER your fixes, "items": [{"rule": short name, "passed": boolean (after fixes), "note": one sentence, prefix "Fixed: " if you fixed it}], "fixed": null if nothing needed fixing, otherwise an object with only the changed keys among title, seo_title, slug, meta_description, excerpt, content_markdown}. Keep facts, voice and citations intact.`,
       "low",
     );
     return parseJson<R>(t);
