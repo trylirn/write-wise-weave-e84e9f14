@@ -14,7 +14,7 @@ export const Route = createFileRoute("/sites")({
   head: () => ({
     meta: [
       { title: "Websites — The Desk" },
-      { name: "description", content: "Manage the four websites your AI agents publish to, and analyze their voice and audience." },
+      { name: "description", content: "Manage the websites your AI agents publish to, and analyze their voice and audience." },
       { property: "og:title", content: "Websites — The Desk" },
       { property: "og:description", content: "Manage publishing websites and analyze their voice and audience." },
     ],
@@ -47,8 +47,8 @@ function SitesPage() {
 
   return (
     <div>
-      <PageHeader kicker={`${list.length} of 4 slots used`} title="Websites">
-        <Button disabled={list.length >= 4} onClick={() => setEditing({ ...blank })}>
+      <PageHeader kicker={`${list.length} website${list.length === 1 ? "" : "s"}`} title="Websites">
+        <Button onClick={() => setEditing({ ...blank })}>
           Add website
         </Button>
       </PageHeader>
@@ -86,7 +86,7 @@ function SitesPage() {
       )}
 
       {list.length === 0 && !editing ? (
-        <Empty>Add up to 4 websites your agents will publish to.</Empty>
+        <Empty>Add the websites your agents will publish to.</Empty>
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
           {list.map((s) => (

@@ -53,8 +53,6 @@ export const saveSite = createServerFn({ method: "POST" })
       ok(await sb.from("sites").update(patch).eq("id", id));
       return { id };
     }
-    const count = check(await sb.from("sites").select("id")).length;
-    if (count >= 4) throw new Error("You can manage up to 4 websites.");
     const row = check(await sb.from("sites").insert({ ...rest, api_key }).select("id").single());
     return { id: row.id };
   });
@@ -138,6 +136,16 @@ export const saveAgent = createServerFn({ method: "POST" })
     }
     const row = check(await sb.from("agents").insert({ ...rest, next_run_at: rest.autopilot ? new Date().toISOString() : null }).select("id").single());
     return { id: row.id };
+  });
+
+export const setAgentRunning = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ id: z.string().uuid(), running: z.boolean() }).parse(d))
+  .handler(async ({ data }) => {
+    const patch = data.running
+      ? { autopilot: true, next_run_at: new Date().toISOString(), last_error: null }
+      : { autopilot: false };
+    ok(await (await db()).from("agents").update(patch).eq("id", data.id));
+    return { ok: true };
   });
 
 export const deleteAgent = createServerFn({ method: "POST" })

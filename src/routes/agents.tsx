@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { listAgents, saveAgent, deleteAgent, listSites } from "@/lib/api.functions";
+import { listAgents, saveAgent, deleteAgent, listSites, setAgentRunning } from "@/lib/api.functions";
 import { PageHeader, Empty, errMsg } from "@/components/desk";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,7 @@ function AgentsPage() {
   const sites = useQuery({ queryKey: ["sites"], queryFn: useServerFn(listSites) });
   const save = useServerFn(saveAgent);
   const remove = useServerFn(deleteAgent);
+  const setRunning = useServerFn(setAgentRunning);
   const [d, setD] = useState<Draft | null>(null);
 
   const onSave = async () => {
@@ -139,6 +140,9 @@ function AgentsPage() {
         <div className="grid gap-6 md:grid-cols-3">
           {(agents.data ?? []).map((a) => (
             <article key={a.id} className="flex flex-col border border-border bg-card p-5">
+              <p className={`font-mono text-xs uppercase tracking-widest ${a.autopilot ? "text-success" : "text-muted-foreground"}`}>
+                {a.autopilot ? "● Writing" : "○ Paused"}
+              </p>
               <h3 className="text-xl font-semibold">{a.name}</h3>
               <p className="font-mono text-xs text-muted-foreground">
                 {sites.data?.find((s) => s.id === a.site_id)?.name ?? "No website"} · ~{a.target_length} words
@@ -146,6 +150,22 @@ function AgentsPage() {
               <p className="mt-3 line-clamp-3 text-sm">{a.persona || "No persona"}</p>
               <p className="mt-2 text-sm italic text-muted-foreground">{a.tone}</p>
               <div className="mt-auto flex gap-2 pt-4">
+                <Button
+                  size="sm"
+                  variant={a.autopilot ? "secondary" : "default"}
+                  onClick={async () => {
+                    try {
+                      await setRunning({ data: { id: a.id, running: !a.autopilot } });
+                      toast.success(a.autopilot ? `${a.name} paused` : `${a.name} resumed`);
+                      qc.invalidateQueries({ queryKey: ["agents"] });
+                      qc.invalidateQueries({ queryKey: ["autopilot"] });
+                    } catch (e) {
+                      toast.error(errMsg(e));
+                    }
+                  }}
+                >
+                  {a.autopilot ? "Pause" : "Play"}
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setD({ ...a })}>Edit</Button>
                 <Button
                   size="sm"
