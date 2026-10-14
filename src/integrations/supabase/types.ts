@@ -181,6 +181,39 @@ export type Database = {
         }
         Relationships: []
       }
+      google_rules: {
+        Row: {
+          changes_summary: string
+          id: number
+          last_checked_at: string | null
+          last_error: string | null
+          next_check_at: string
+          rules_text: string
+          sources: Json
+          updated_at: string
+        }
+        Insert: {
+          changes_summary?: string
+          id: number
+          last_checked_at?: string | null
+          last_error?: string | null
+          next_check_at?: string
+          rules_text?: string
+          sources?: Json
+          updated_at?: string
+        }
+        Update: {
+          changes_summary?: string
+          id?: number
+          last_checked_at?: string | null
+          last_error?: string | null
+          next_check_at?: string
+          rules_text?: string
+          sources?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       publish_logs: {
         Row: {
           article_id: string | null
