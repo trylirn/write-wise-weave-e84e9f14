@@ -117,6 +117,7 @@ const agentInput = z.object({
   site_id: z.string().uuid().nullable(),
   autopilot: z.boolean().default(false),
   articles_per_day: z.number().int().min(1).max(24).default(1),
+  seed_keywords: z.string().max(4000).default(""),
 });
 
 export const listAgents = createServerFn({ method: "GET" }).handler(async () =>
