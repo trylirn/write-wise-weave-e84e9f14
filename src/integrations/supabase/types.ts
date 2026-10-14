@@ -26,6 +26,7 @@ export type Database = {
           name: string
           next_run_at: string | null
           persona: string
+          seed_keywords: string
           site_id: string | null
           target_length: number
           tone: string
@@ -42,6 +43,7 @@ export type Database = {
           name: string
           next_run_at?: string | null
           persona?: string
+          seed_keywords?: string
           site_id?: string | null
           target_length?: number
           tone?: string
@@ -58,6 +60,7 @@ export type Database = {
           name?: string
           next_run_at?: string | null
           persona?: string
+          seed_keywords?: string
           site_id?: string | null
           target_length?: number
           tone?: string

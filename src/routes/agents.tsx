@@ -34,6 +34,7 @@ type Draft = {
   site_id: string | null;
   autopilot: boolean;
   articles_per_day: number;
+  seed_keywords: string;
 };
 const blank: Draft = {
   name: "",
@@ -45,6 +46,7 @@ const blank: Draft = {
   site_id: null,
   autopilot: true,
   articles_per_day: 1,
+  seed_keywords: "",
 };
 
 function AgentsPage() {
@@ -114,6 +116,11 @@ function AgentsPage() {
             <div className="md:col-span-2">
               <Label className="mb-1 block">Formatting rules</Label>
               <Textarea rows={3} value={d.formatting_rules} onChange={(e) => setD({ ...d, formatting_rules: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="mb-1 block">Your keywords (optional)</Label>
+              <Textarea rows={3} value={d.seed_keywords ?? ""} placeholder="remote jobs for nurses, how to write a cover letter, salary negotiation tips" onChange={(e) => setD({ ...d, seed_keywords: e.target.value })} />
+              <p className="mt-1 text-sm text-muted-foreground">Separate with commas or new lines. These are added to the agent's own research, which keeps running as usual.</p>
             </div>
             <label className="flex items-center gap-3 border border-border bg-background p-3">
               <Switch checked={d.autopilot} onCheckedChange={(v) => setD({ ...d, autopilot: v })} />

@@ -25,15 +25,22 @@ export async function discoverTopic(agentId: string) {
   const niche = a?.niche || site?.name || agent.persona.slice(0, 80) || agent.name;
   const themes = (a?.content_themes ?? []).slice(0, 3);
   const year = new Date().getFullYear();
+  // Owner-supplied keywords are an extra pool; our own research always runs too.
+  const seeds = (agent.seed_keywords ?? "").split(/[,\n]/).map((k: string) => k.trim()).filter(Boolean);
+  const picked = [...seeds].sort(() => Math.random() - 0.5).slice(0, 2);
   const research = await perplexitySearch([
     `${niche} trending questions ${year}`,
     `${niche} latest news`,
+    ...picked.map((k) => `${k} ${year}`),
     ...themes.map((t) => `${t} ${year}`),
   ].slice(0, 5));
   const { data: past } = await sb.from("articles").select("title").eq(agent.site_id ? "site_id" : "agent_id", agent.site_id ?? agent.id).order("created_at", { ascending: false }).limit(40);
+  const seedBlock = seeds.length
+    ? `\n\nOWNER'S EXTRA KEYWORDS (an additional pool of ideas, not a replacement for your own research): ${seeds.join(", ")}\nFocus this time: ${picked.join(", ")}. You may build the topic around one of these OR pick a stronger topic from your own research; over time cover both.`
+    : "";
   const text = await generateText(
     "You are an SEO content strategist. Reply with JSON only.",
-    `Choose ONE fresh article topic for this publication.\nNiche: ${niche}\nAudience: ${a?.audience ?? "general"}\nThemes: ${(a?.content_themes ?? []).join(", ")}\nAgent persona: ${agent.persona}\n\nLIVE RESEARCH:\n${research.map((r) => `- ${r.title}: ${r.snippet}`).join("\n")}\n\nALREADY COVERED (avoid similar topics):\n${(past ?? []).map((p) => `- ${p.title}`).join("\n") || "(none)"}\n\nPick a topic people are actively searching for now, with real search intent. Return JSON {"topic": string, "keywords": [3-6 strings, primary first]}.`,
+    `Choose ONE fresh article topic for this publication.\nNiche: ${niche}\nAudience: ${a?.audience ?? "general"}\nThemes: ${(a?.content_themes ?? []).join(", ")}\nAgent persona: ${agent.persona}${seedBlock}\n\nLIVE RESEARCH:\n${research.map((r) => `- ${r.title}: ${r.snippet}`).join("\n")}\n\nALREADY COVERED (avoid similar topics):\n${(past ?? []).map((p) => `- ${p.title}`).join("\n") || "(none)"}\n\nPick a topic people are actively searching for now, with real search intent. Return JSON {"topic": string, "keywords": [3-6 strings, primary first]}.`,
     "low",
   );
   const g = parseJson<{ topic: string; keywords: string[] }>(text);
