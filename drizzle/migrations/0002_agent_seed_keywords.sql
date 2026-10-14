@@ -1,0 +1,1 @@
+ALTER TABLE public.agents ADD COLUMN IF NOT EXISTS seed_keywords text NOT NULL DEFAULT '';
