@@ -237,6 +237,7 @@ function ArticlePage() {
               <Input value={f.tags} onChange={set("tags")} />
             </div>
             <div>
+              {a.cover_image_url && <img src={a.cover_image_url} alt={a.title} className="mb-3 aspect-video w-full rounded object-cover" />}
               <Label className="mb-1 block">Cover image prompt</Label>
               <Textarea rows={3} value={f.cover_image_prompt} onChange={set("cover_image_prompt")} />
             </div>
