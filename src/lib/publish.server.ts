@@ -23,6 +23,7 @@ export async function publishArticle(articleId: string) {
     content_markdown: a.content_markdown,
     content_html: await marked.parse(a.content_markdown),
     cover_image_prompt: a.cover_image_prompt,
+    cover_image_url: a.cover_image_url ?? null,
     tags: a.tags,
     citations: a.citations,
     author: site.default_author,

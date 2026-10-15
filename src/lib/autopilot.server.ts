@@ -2,6 +2,7 @@ import { generateText, parseJson } from "./ai.server";
 import { perplexitySearch, type SearchResult } from "./perplexity.server";
 import { publishArticle } from "./publish.server";
 import { getGoogleRules } from "./google-rules.server";
+import { wantsCoverImage, makeCoverImage } from "./cover-image.server";
 
 type Analysis = { niche?: string; audience?: string; tone_of_voice?: string; content_themes?: string[]; writing_guidelines?: string[] } | null;
 
@@ -88,6 +89,7 @@ export async function writeArticle(opts: { agent_id: string; topic: string; keyw
     auto_generated: !!opts.auto,
   }).select("id").single();
   if (error || !row) throw new Error(error?.message ?? "Could not save article");
+  if (wantsCoverImage(agent.name)) await makeCoverImage(row.id as string, g.cover_image_prompt || g.title || opts.topic);
   return { id: row.id as string };
 }
 
