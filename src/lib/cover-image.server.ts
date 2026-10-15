@@ -9,7 +9,7 @@ export function wantsCoverImage(agentName: string) {
 
 export async function makeCoverImage(articleId: string, subject: string): Promise<string | null> {
   try {
-    const key = process.env.LOVABLE_API_KEY;
+    const key = process.env['LOVABLE_API_KEY'];
     if (!key) throw new Error("LOVABLE_API_KEY missing");
     const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
