@@ -83,6 +83,7 @@ export type Database = {
           citations: Json
           content_markdown: string
           cover_image_prompt: string
+          cover_image_url: string | null
           created_at: string
           excerpt: string
           id: string
@@ -108,6 +109,7 @@ export type Database = {
           citations?: Json
           content_markdown?: string
           cover_image_prompt?: string
+          cover_image_url?: string | null
           created_at?: string
           excerpt?: string
           id?: string
@@ -133,6 +135,7 @@ export type Database = {
           citations?: Json
           content_markdown?: string
           cover_image_prompt?: string
+          cover_image_url?: string | null
           created_at?: string
           excerpt?: string
           id?: string
