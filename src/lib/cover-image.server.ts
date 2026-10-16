@@ -36,6 +36,34 @@ export async function makeCoverImage(articleId: string, subject: string): Promis
     await supabaseAdmin.from("articles").update({ cover_image_url: data.signedUrl }).eq("id", articleId);
     return data.signedUrl;
   } catch (e) {
+    console.error("AI cover failed, trying Pexels:", e instanceof Error ? e.message : e);
+    return pexelsCover(articleId, subject);
+  }
+}
+
+// Backup: a landscape interior photo from Pexels. Never throws.
+export async function pexelsCover(articleId: string, subject: string): Promise<string | null> {
+  try {
+    const key = process.env['PEXELS_API_KEY'];
+    if (!key) throw new Error("PEXELS_API_KEY missing");
+    const words = subject.replace(/[^\w\s-]/g, " ").split(/\s+/).filter((w) => w.length > 3).slice(0, 5).join(" ");
+    for (const q of [`${words} interior`, "interior design living room"]) {
+      const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&orientation=landscape&per_page=15`, {
+        headers: { Authorization: key },
+      });
+      if (!res.ok) throw new Error(`[${res.status}] ${(await res.text()).slice(0, 200)}`);
+      const json = (await res.json()) as { photos?: { src?: { landscape?: string; large2x?: string } }[] };
+      const photos = json.photos ?? [];
+      if (!photos.length) continue;
+      const p = photos[Math.floor(Math.random() * Math.min(photos.length, 5))];
+      const url = p?.src?.large2x ?? p?.src?.landscape;
+      if (!url) continue;
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("articles").update({ cover_image_url: url }).eq("id", articleId);
+      return url;
+    }
+    throw new Error("No Pexels results");
+  } catch (e) {
     console.error("Cover image skipped:", e instanceof Error ? e.message : e);
     return null;
   }
