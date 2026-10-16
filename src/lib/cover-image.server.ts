@@ -56,7 +56,7 @@ export async function pexelsCover(articleId: string, subject: string): Promise<s
       const photos = json.photos ?? [];
       if (!photos.length) continue;
       const p = photos[Math.floor(Math.random() * Math.min(photos.length, 5))];
-      const url = p.src?.large2x ?? p.src?.landscape;
+      const url = p?.src?.large2x ?? p?.src?.landscape;
       if (!url) continue;
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin.from("articles").update({ cover_image_url: url }).eq("id", articleId);
